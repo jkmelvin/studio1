@@ -15,8 +15,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useMqttSettings } from "@/hooks/use-mqtt-settings";
-import { useEffect } from "react";
-import { Rss, Save } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Rss, Save, TestTube2, Loader2 } from "lucide-react";
+import { testConnection } from "@/lib/mqtt";
 
 const formSchema = z.object({
   brokerUrl: z.string().url({ message: "Please enter a valid URL (e.g., wss://broker.hivemq.com:8884/mqtt)." }),
@@ -26,6 +27,7 @@ const formSchema = z.object({
 export function SettingsForm() {
   const { toast } = useToast();
   const { settings, saveSettings } = useMqttSettings();
+  const [isTesting, setIsTesting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -48,6 +50,36 @@ export function SettingsForm() {
       description: "Your MQTT configuration has been updated.",
     });
   }
+
+  async function handleTestConnection() {
+    const values = form.getValues();
+    const result = formSchema.safeParse(values);
+    if (!result.success) {
+      form.trigger(); // show validation errors
+      return;
+    }
+    
+    setIsTesting(true);
+    try {
+      await testConnection(values);
+      toast({
+        title: "Connection Successful",
+        description: "Successfully connected to the MQTT broker.",
+        variant: "default",
+        className: "bg-accent text-accent-foreground border-accent",
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({
+        title: "Connection Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
 
   return (
     <Form {...form}>
@@ -81,10 +113,16 @@ export function SettingsForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
-          <Save className="mr-2 h-4 w-4" />
-          Save Settings
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button type="submit" className="w-full">
+            <Save className="mr-2 h-4 w-4" />
+            Save Settings
+          </Button>
+          <Button type="button" variant="outline" className="w-full" onClick={handleTestConnection} disabled={isTesting}>
+            {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <TestTube2 className="mr-2 h-4 w-4" /> }
+            {isTesting ? "Testing..." : "Test Connection"}
+          </Button>
+        </div>
       </form>
     </Form>
   );
