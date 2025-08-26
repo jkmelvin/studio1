@@ -61,7 +61,8 @@ export function NfcReader() {
         addLog("success", `Tag found! Serial: ${serialNumber}`);
 
         for (const record of event.message.records) {
-          const decodedData = decoder.decode(record.data);
+          // record.data is a DataView. We need to get the ArrayBuffer to decode it.
+          const decodedData = decoder.decode(record.data?.buffer);
           addLog("data", `Record type: ${record.recordType}, Data: "${decodedData}"`);
           
           if (settings.brokerUrl && settings.topic) {

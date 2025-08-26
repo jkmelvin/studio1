@@ -36,7 +36,9 @@ export function NfcWriter() {
     try {
       setStatus("writing");
       const ndef = new NDEFReader();
-      await ndef.write(text);
+      // The NDEFReader's write method can accept a string directly.
+      // It handles the encoding internally.
+      await ndef.write({ records: [{ recordType: "text", data: text }] });
       setStatus("success");
       toast({
         title: "Write Successful!",
