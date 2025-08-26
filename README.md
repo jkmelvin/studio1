@@ -9,90 +9,89 @@ This is a Next.js web application that allows you to read and write data to NFC 
 - **MQTT Integration**: Sends NFC data to a configured MQTT broker.
 - **Settings**: Configure and save MQTT broker details (URL and topic) in your browser's local storage.
 
-**Note on Browser Support**: This application relies on the Web NFC API, which is currently supported in Chrome on Android. The device running the browser must have an NFC reader. For security reasons, the Web NFC API is only available on websites served over HTTPS.
+**Note on Browser Support**: This application relies on the Web NFC API, which is currently supported in Chrome on Android. For security reasons, the Web NFC API is only available on websites served over HTTPS.
 
-## Setup on a Raspberry Pi
+---
 
-You can run this web application on a Raspberry Pi, which can act as a local web server. This allows you to access the app from a mobile device (like an Android phone) on the same network.
+## Local Development and Testing Setup
+
+You can run this web application on your local machine (like a laptop) for development and testing. This allows you to access the app from a mobile device (like an Android phone) on the same local network.
 
 ### Prerequisites
 
-1.  A Raspberry Pi with Raspberry Pi OS.
-2.  Node.js and npm installed on the Raspberry Pi.
-3.  A mobile device with an NFC reader and a supported browser (e.g., Chrome for Android).
+1.  A computer with Node.js and npm installed.
+2.  A mobile device with an NFC reader and a supported browser (e.g., Chrome for Android).
+3.  Your computer and mobile device must be connected to the same Wi-Fi network.
 
-### Steps
+### 1. Install Dependencies
 
-1.  **Install Node.js and npm:**
+Navigate to the project directory in your terminal and install the required packages:
 
-    If you don't have Node.js and npm installed on your Raspberry Pi, you can install them using NodeSource:
+```bash
+npm install
+```
 
-    ```bash
-    # Download and import the Nodesource GPG key
-    sudo apt-get update
-    sudo apt-get install -y ca-certificates curl gnupg
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+### 2. Run the Development Server
 
-    # Create deb repository
-    NODE_MAJOR=20
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+Start the Next.js development server:
 
-    # Run Update and Install
-    sudo apt-get update
-    sudo apt-get install nodejs -y
-    ```
+```bash
+npm run dev
+```
 
-2.  **Clone the Repository:**
+This will start the application, typically on port 9002. You'll see output in your terminal like:
 
-    Clone this project onto your Raspberry Pi.
+```
+- ready started server on 0.0.0.0:9002, url: http://localhost:9002
+```
 
-    ```bash
-    git clone <your-repository-url>
-    cd nfc-connect # Or your project directory name
-    ```
+### 3. Find Your Local IP Address
 
-3.  **Install Dependencies:**
+To access the app from your mobile phone, you'll need your computer's local IP address.
 
-    ```bash
-    npm install
-    ```
+- **On macOS:** `ifconfig | grep "inet " | grep -v 127.0.0.1`
+- **On Windows:** `ipconfig | findstr "IPv4 Address"`
+- **On Linux:** `hostname -I` or `ip a`
 
-4.  **Build the Application:**
+Look for an address that starts with `192.168.x.x`, `10.x.x.x`, or `172.16.x.x`.
 
-    ```bash
-    npm run build
-    ```
+### 4. Access the App from Your Phone
 
-5.  **Start the Production Server:**
+On your Android phone, open Chrome and navigate to the address from the previous step, including the port number. For example: `http://192.168.1.10:9002`.
 
-    ```bash
-    npm start
-    ```
-
-    By default, the app will run on port 3000.
-
-6.  **Access the App:**
-
-    Find your Raspberry Pi's local IP address:
-
-    ```bash
-    hostname -I
-    ```
-
-    From your mobile device connected to the same Wi-Fi network, open a web browser and navigate to `http://<raspberry_pi_ip_address>:3000`.
+You should now see the NFC Connect application.
 
 ### Important: Enabling HTTPS for Web NFC
 
-The Web NFC API requires a secure context (HTTPS). The standard `npm start` command serves the site over HTTP. To use the NFC features, you must serve the application over HTTPS.
+The Web NFC API requires a secure context (HTTPS). The development server runs on HTTP, so the NFC features **will not work** by default.
 
-This typically involves setting up a reverse proxy like **Nginx** or **Caddy** on your Raspberry Pi to handle SSL/TLS encryption. You can use self-signed certificates for a local network or a service like Let's Encrypt for a public domain. This setup is advanced but necessary for the NFC functionality to work.
+For local testing, the easiest solution is to use a tool like **`mkcert`** to create a trusted local certificate and then configure the Next.js development server to use it. This is an advanced setup but necessary for testing the NFC functionality. Running the app on a platform like Firebase App Hosting (which provides HTTPS automatically) is an easier alternative for a deployed environment.
 
-### Optional: Running an MQTT Broker
+### 5. Optional: Running a Local MQTT Broker
 
-Your Raspberry Pi is also an excellent device for running an MQTT broker like [Mosquitto](https://mosquitto.org/). You can install it on your Pi and then use its local IP address in the NFC Connect app's settings.
+To test the MQTT integration, you can run a broker on your local machine. [Mosquitto](https://mosquitto.org/) is a popular choice.
 
-```bash
-sudo apt-get update
-sudo apt-get install mosquitto mosquitto-clients
-```
+1.  **Install Mosquitto:**
+    -   **macOS:** `brew install mosquitto`
+    -   **Windows/Linux:** Follow the official installation guide.
+
+2.  **Configure for WebSocket Support:**
+    The app connects to MQTT over WebSockets. Create a `mosquitto.conf` file with the following content:
+
+    ```conf
+    # Listener for standard MQTT
+    listener 1883
+
+    # Listener for WebSockets
+    listener 9001
+    protocol websockets
+    ```
+
+3.  **Run Mosquitto:**
+    Start the broker with your configuration file:
+    ```bash
+    mosquitto -c /path/to/your/mosquitto.conf
+    ```
+
+4.  **Configure the App:**
+    In the NFC Connect app's settings, use your computer's IP address as the broker URL with the WebSocket protocol and port. For example: `ws://192.168.1.10:9001`.
