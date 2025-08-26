@@ -61,16 +61,19 @@ export function NfcReader() {
         addLog("success", `Tag found! Serial: ${serialNumber}`);
 
         for (const record of event.message.records) {
-          // record.data is a DataView. We need to get the ArrayBuffer to decode it.
-          const decodedData = decoder.decode(record.data?.buffer);
-          addLog("data", `Record type: ${record.recordType}, Data: "${decodedData}"`);
-          
-          if (settings.brokerUrl && settings.topic) {
-            publish(settings, decodedData)
-              .then(() => addLog("info", `Data sent to MQTT topic: ${settings.topic}`))
-              .catch((err) => addLog("error", `MQTT publish failed: ${err.message}`));
+          if (record.data) {
+            const decodedData = decoder.decode(record.data);
+            addLog("data", `Record type: ${record.recordType}, Data: "${decodedData}"`);
+            
+            if (settings.brokerUrl && settings.topic) {
+              publish(settings, decodedData)
+                .then(() => addLog("info", `Data sent to MQTT topic: ${settings.topic}`))
+                .catch((err) => addLog("error", `MQTT publish failed: ${err.message}`));
+            } else {
+              addLog("error", "MQTT settings not configured. Data not sent.");
+            }
           } else {
-            addLog("error", "MQTT settings not configured. Data not sent.");
+            addLog("info", `Record type: ${record.recordType} has no data.`);
           }
         }
         
